@@ -7,7 +7,7 @@ Since decision trees are a good algorithm for discovering the structure hidden b
 
 ## About the Car Evaluation Data Set
 
-For more information:: http://archive.ics.uci.edu/ml/datasets/Car+Evaluation
+For more information: http://archive.ics.uci.edu/ml/datasets/Car+Evaluation
 
 ### Overview
 
@@ -59,7 +59,7 @@ Number of Instances: 1728
 ## Let's download the data: 
 
 
-```python
+```
 !cat download_data.sh
 !./download_data.sh
 ```
@@ -68,7 +68,7 @@ Number of Instances: 1728
     wget http://archive.ics.uci.edu/ml/machine-learning-databases/car/car.data
     wget http://archive.ics.uci.edu/ml/machine-learning-databases/car/car.names
     
-    --2017-07-04 17:39:17--  http://archive.ics.uci.edu/ml/machine-learning-databases/car/car.c45-names
+    --2017-07-04 18:56:54--  http://archive.ics.uci.edu/ml/machine-learning-databases/car/car.c45-names
     Resolving archive.ics.uci.edu (archive.ics.uci.edu)... 128.195.10.249
     Connecting to archive.ics.uci.edu (archive.ics.uci.edu)|128.195.10.249|:80... connected.
     HTTP request sent, awaiting response... 200 OK
@@ -77,20 +77,20 @@ Number of Instances: 1728
     
     car.c45-names       100%[===================>]     276  --.-KB/s    in 0s      
     
-    2017-07-04 17:39:17 (45,8 MB/s) - ‘car.c45-names’ saved [276/276]
+    2017-07-04 18:56:54 (46,7 MB/s) - ‘car.c45-names’ saved [276/276]
     
-    --2017-07-04 17:39:17--  http://archive.ics.uci.edu/ml/machine-learning-databases/car/car.data
+    --2017-07-04 18:56:54--  http://archive.ics.uci.edu/ml/machine-learning-databases/car/car.data
     Resolving archive.ics.uci.edu (archive.ics.uci.edu)... 128.195.10.249
     Connecting to archive.ics.uci.edu (archive.ics.uci.edu)|128.195.10.249|:80... connected.
     HTTP request sent, awaiting response... 200 OK
     Length: 51867 (51K) [text/plain]
     Saving to: ‘car.data’
     
-    car.data            100%[===================>]  50,65K   272KB/s    in 0,2s    
+    car.data            100%[===================>]  50,65K   273KB/s    in 0,2s    
     
-    2017-07-04 17:39:18 (272 KB/s) - ‘car.data’ saved [51867/51867]
+    2017-07-04 18:56:54 (273 KB/s) - ‘car.data’ saved [51867/51867]
     
-    --2017-07-04 17:39:18--  http://archive.ics.uci.edu/ml/machine-learning-databases/car/car.names
+    --2017-07-04 18:56:54--  http://archive.ics.uci.edu/ml/machine-learning-databases/car/car.names
     Resolving archive.ics.uci.edu (archive.ics.uci.edu)... 128.195.10.249
     Connecting to archive.ics.uci.edu (archive.ics.uci.edu)|128.195.10.249|:80... connected.
     HTTP request sent, awaiting response... 200 OK
@@ -99,7 +99,7 @@ Number of Instances: 1728
     
     car.names           100%[===================>]   3,02K  --.-KB/s    in 0s      
     
-    2017-07-04 17:39:18 (415 MB/s) - ‘car.names’ saved [3097/3097]
+    2017-07-04 18:56:54 (536 MB/s) - ‘car.names’ saved [3097/3097]
     
 
 
@@ -108,7 +108,7 @@ Number of Instances: 1728
 Let's first import all what we need:
 
 
-```python
+```
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -119,14 +119,10 @@ from sklearn.preprocessing import LabelEncoder, OneHotEncoder
 import os
 ```
 
-    /usr/local/lib/python3.5/dist-packages/sklearn/cross_validation.py:44: DeprecationWarning: This module was deprecated in version 0.18 in favor of the model_selection module into which all the refactored classes and functions are moved. Also note that the interface of the new CV iterators are different from that of this module. This module will be removed in 0.20.
-      "This module will be removed in 0.20.", DeprecationWarning)
-
-
 ### Define the features and preprocess the car evaluation data set
 
 
-```python
+```
 output_labels = ["unacc", "acc", "good", "vgood"]
 
 input_labels = [
@@ -187,7 +183,7 @@ dtrain = xgb.DMatrix(pdtrain, integer_y)
 First, let's define some hyperparameters, such as the depth of the tree.
 
 
-```python
+```
 
 num_rounds = 1  # Do not use boosting for now, we want only 1 decision tree per class.
 num_classes = len(output_labels)
@@ -217,7 +213,7 @@ print(bst.eval(dtrain))
 The 4 trees of the classifer (one tree per class) will each output a number that represents how much it is probable that the thing to classify belongs to that class, and it is by comparing the output at the end of all the trees for a given example that we could get the maximal output as associating the example to that class.  Indeed, the binary situation where we have only one tree that outputs a positive and else negative number would be simpler to interpret rather than classifying for 4 binary classes at once. 
 
 
-```python
+```
 def plot_first_trees(bst, output_labels, trees_name):
     """
     Plot and save the first trees for multiclass classification
@@ -226,7 +222,7 @@ def plot_first_trees(bst, output_labels, trees_name):
     for tree_idx in range(len(output_labels)):
         class_name = output_labels[tree_idx]
         graph_save_path = os.path.join(
-            "exported_graphs", 
+            "exported_trees", 
             "{}_{}_for_{}".format(trees_name, tree_idx, class_name)
         )
 
@@ -262,12 +258,15 @@ plot_first_trees(bst, output_labels, trees_name="simple_tree")
 ![png](Decision-Trees-For-Knowledge-Discovery_files/Decision-Trees-For-Knowledge-Discovery_9_3.png)
 
 
+Note that the above trees can be viewed here online:
+https://github.com/Vooban/Decision-Trees-For-Knowledge-Discovery/tree/master/exported_trees
+
 ### Plot the importance of each input features for those simple decision trees:
 
 Note here that it is the feature importance according to our simple, shallow trees. More complex trees would include more of the features/attributes with different proportions. 
 
 
-```python
+```
 fig, ax = plt.subplots(figsize=(12, 7)) 
 xgb.plot_importance(bst, ax=ax)
 plt.show()
@@ -279,10 +278,16 @@ plt.show()
 
 ### Let's now generate slightly more complex trees to aid inspection
 
-However, those trees are not maximally complex to keep things simple.
+<a href="http://theinceptionbutton.com/" >
+<p align="center">
+  <img src="deeper.jpg" />
+</p>
+</a>
+
+Let's [go deeper](http://theinceptionbutton.com/) and build deeper trees. However, those trees are not maximally complex since XGBoost is rather built to boost over forests of small trees than a big one.
 
 
-```python
+```
 num_rounds = 1  # Do not use boosting for now, we want only 1 decision tree per class.
 num_classes = len(output_labels)
 num_trees = num_rounds * num_classes
@@ -307,7 +312,7 @@ print(bst.eval(dtrain))
 
 
 
-```python
+```
 # Plot our complex trees:
 plot_first_trees(bst, output_labels, trees_name="complex_tree")
 
@@ -341,6 +346,86 @@ plt.show()
 ![png](Decision-Trees-For-Knowledge-Discovery_files/Decision-Trees-For-Knowledge-Discovery_14_5.png)
 
 
+Note that the above trees can be viewed here online:
+https://github.com/Vooban/Decision-Trees-For-Knowledge-Discovery/tree/master/exported_trees
+
+### Finding a perfect classifier rather than an easily explainable one
+
+We'll now use boosting. The resulting trees can't be explained as easily as the previous ones, since one classifier will now have incrementally many trees for each class to reduce error, each new trees based on the errors of the previous ones. And those trees will each be weighted. 
+
+
+```
+num_rounds = 10  # 10 rounds of boosting, thus 10 trees per class. 
+num_classes = len(output_labels)
+num_trees = num_rounds * num_classes
+
+param = {
+    'max_depth': 20,
+    'eta': 1.43,
+    'objective': 'multi:softprob',
+    'num_class': num_classes,
+}
+
+bst = xgb.train(param, dtrain, early_stopping_rounds=1, num_boost_round=num_rounds, evals=[(dtrain, "dtrain")])
+print("Boosted decision trees trained!")
+print("Mean Error Rate:")
+print(bst.eval(dtrain))
+```
+
+    [0]	dtrain-merror:0.020833
+    Will train until dtrain-merror hasn't improved in 1 rounds.
+    [1]	dtrain-merror:0.003472
+    [2]	dtrain-merror:0
+    [3]	dtrain-merror:0
+    Stopping. Best iteration:
+    [2]	dtrain-merror:0
+    
+    Boosted decision trees trained!
+    Mean Error Rate:
+    b'[0]\teval-merror:0.000000'
+
+
+### Finally, the full attributes/features importance:
+
+
+```
+# Some plot options from the doc:
+# importance_type : str, default "weight"
+#     How the importance is calculated: either "weight", "gain", or "cover"
+#     "weight" is the number of times a feature appears in a tree
+#     "gain" is the average gain of splits which use the feature
+#     "cover" is the average coverage of splits which use the feature
+#         where coverage is defined as the number of samples affected by the split
+
+importance_types = ["weight", "gain", "cover"]
+for i in importance_types:
+    print("Importance type:", i)
+    fig, ax = plt.subplots(figsize=(12, 7))
+    xgb.plot_importance(bst, importance_type=i, ax=ax)
+    plt.show()
+```
+
+    Importance type: weight
+
+
+
+![png](Decision-Trees-For-Knowledge-Discovery_files/Decision-Trees-For-Knowledge-Discovery_18_1.png)
+
+
+    Importance type: gain
+
+
+
+![png](Decision-Trees-For-Knowledge-Discovery_files/Decision-Trees-For-Knowledge-Discovery_18_3.png)
+
+
+    Importance type: cover
+
+
+
+![png](Decision-Trees-For-Knowledge-Discovery_files/Decision-Trees-For-Knowledge-Discovery_18_5.png)
+
+
 ## Conclusion
 
 To sum up, we achieved to not only get a good classification result, but to also explain the results of the classification visually and automatically. Here, we did classification (so we requred 4 trees - one for each class), but also note that it would have been possible to solve a regression problem, too. Decision trees are also robust to numeric inputs and outputs (such as floats). As an improvement to this project, it would have been possible to take advantage of the fact we had integers for some attributes in our data set. 
@@ -350,8 +435,26 @@ Such a technique would be useful in reverse engineering an existing system, such
 It is very good to model datasets and it has revealed to be a <a link="http://blog.kaggle.com/2017/01/23/a-kaggle-master-explains-gradient-boosting/">quite good algorithm for winning Kaggle competitions</a>. XGBoost is normally used for boosting trees (also called gradient boosting). That is, averaging many trees (each with an importance weight) until the trees cover the complete possibilities - and each tree is trained on the errors of the previous ones until the error gets at its lowest. In our case, it would be possible to have an error of 0 since we have a dataset that represents a deterministic pure function. Using XGBoost can lead to great results in plus of being interesting for roughly explaining how classifications are made on data.
 
 
-```python
+```
 # Let's convert this notebook to a README for the GitHub project's title page:
 !jupyter nbconvert --to markdown Decision-Trees-For-Knowledge-Discovery.ipynb
 !mv Decision-Trees-For-Knowledge-Discovery.md README.md
 ```
+
+    [NbConvertApp] Converting notebook Decision-Trees-For-Knowledge-Discovery.ipynb to markdown
+    [NbConvertApp] Support files will be in Decision-Trees-For-Knowledge-Discovery_files/
+    [NbConvertApp] Making directory Decision-Trees-For-Knowledge-Discovery_files
+    [NbConvertApp] Making directory Decision-Trees-For-Knowledge-Discovery_files
+    [NbConvertApp] Making directory Decision-Trees-For-Knowledge-Discovery_files
+    [NbConvertApp] Making directory Decision-Trees-For-Knowledge-Discovery_files
+    [NbConvertApp] Making directory Decision-Trees-For-Knowledge-Discovery_files
+    [NbConvertApp] Making directory Decision-Trees-For-Knowledge-Discovery_files
+    [NbConvertApp] Making directory Decision-Trees-For-Knowledge-Discovery_files
+    [NbConvertApp] Making directory Decision-Trees-For-Knowledge-Discovery_files
+    [NbConvertApp] Making directory Decision-Trees-For-Knowledge-Discovery_files
+    [NbConvertApp] Making directory Decision-Trees-For-Knowledge-Discovery_files
+    [NbConvertApp] Making directory Decision-Trees-For-Knowledge-Discovery_files
+    [NbConvertApp] Making directory Decision-Trees-For-Knowledge-Discovery_files
+    [NbConvertApp] Making directory Decision-Trees-For-Knowledge-Discovery_files
+    [NbConvertApp] Writing 17894 bytes to Decision-Trees-For-Knowledge-Discovery.md
+
