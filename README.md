@@ -58,36 +58,39 @@ Number of Instances: 1728 (Instances completely cover the attribute space.)
 | v-good | 65 | 3.762 % |
 
 
-## We'll now load the car evaluation data set in Python and then train decision trees
+## We'll now load the car evaluation data set in Python and then train decision trees with Scikit-Learn
 
 
 ```python
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-import xgboost as xgb
-from xgboost import plot_tree
 from sklearn.preprocessing import LabelEncoder, OneHotEncoder
+from sklearn import tree
+import pydot
 
+from io import StringIO
 import os
 ```
 
 ### Define the features and preprocess the car evaluation data set
 
-Note: you must have first downloaded the data by running `./download_data.sh` while in the repository's folder on an unix system (Lunix, Mac) or else open the script and manually go to the written urls to download the data. 
+We'll preprocess the attributes into redundant features, such as using an integer index (linear) to represent a value for an attribute, as well as also using a one-hot encoding for each attribute's possible values as new features. Despite this is redundant, this will help to make the tree smaller since it has more choice on how to split data on each branch. 
 
 
 ```python
+# The integer values for features will take
+# a range from 0 to n-1 in the lists of possible values:
 input_labels = [
     ["buying", ["vhigh", "high", "med", "low"]],
     ["maint", ["vhigh", "high", "med", "low"]],
-    ["doors", ["2", "3", "4", "5more"]],
+    ["doors", ["2", "3", "4", "5more"]],  # Here indexes are not real values
     ["persons", ["2", "4", "more"]],
     ["lug_boot", ["small", "med", "big"]],
     ["safety", ["low", "med", "high"]],
 ]
 
-output_labels = ["unacc", "acc", "good", "vgood"]
+class_names = ["unacc", "acc", "good", "vgood"]
 
 # Load data set
 data = np.genfromtxt(os.path.join('data', 'car.data'), delimiter=',', dtype="U")
@@ -99,14 +102,14 @@ def str_data_to_one_hot(data, input_labels):
     X_int = LabelEncoder().fit_transform(data.ravel()).reshape(*data.shape)
     X_bin = OneHotEncoder().fit_transform(X_int).toarray()
     
-    attrs_names = []
+    feature_names = []
     for a in input_labels:
         key = a[0]
         for b in a[1]:
             value = b
-            attrs_names.append("{}_is_{}".format(key, value))
+            feature_names.append("{}_is_{}".format(key, value))
 
-    return X_bin, attrs_names
+    return X_bin, feature_names
 
 def str_data_to_linear(data, input_labels):
     """Convert each feature's string to an integer index"""
@@ -114,136 +117,114 @@ def str_data_to_linear(data, input_labels):
         input_labels[a][1].index(j) for a, j in enumerate(i)
     ] for i in data])
     
-    # Indexes will range from 0 to n-1
-    attrs_names = [i[0] + "_index" for i in input_labels]
+    # Integer feature indexes will range
+    # from 0 to n-1 from indexes in the label list:
+    feature_names = [i[0] + "_index" for i in input_labels]
     
-    return X_lin, attrs_names
+    return X_lin, feature_names
 
 # Take both one-hot and linear versions of input features: 
-X_one_hot, attrs_names_one_hot = str_data_to_one_hot(data_inputs, input_labels)
-X_linear_int, attrs_names_linear_int = str_data_to_linear(data_inputs, input_labels)
+X_one_hot, feature_names_one_hot = str_data_to_one_hot(data_inputs, input_labels)
+X_linear_int, feature_names_linear_int = str_data_to_linear(data_inputs, input_labels)
 
 # Put that together:
 X = np.concatenate([X_one_hot, X_linear_int], axis=-1)
-attrs_names = attrs_names_one_hot + attrs_names_linear_int
+feature_names = feature_names_one_hot + feature_names_linear_int
 
 # Outputs use indexes, this is not one-hot:
-integer_y = np.array([output_labels.index(i) for i in data_outputs])
+integer_y = np.array([class_names.index(i) for i in data_outputs])
 
 print("Data set's shape,")
-print("X.shape, integer_y.shape, len(attrs_names), len(output_labels):")
-print(X.shape, integer_y.shape, len(attrs_names), len(output_labels))
+print("X.shape, integer_y.shape, len(feature_names), len(class_names):")
+print(X.shape, integer_y.shape, len(feature_names), len(class_names))
 
-# Shaping the data into a single pandas dataframe for naming columns:
-pdtrain = pd.DataFrame(X)
-pdtrain.columns = attrs_names
-dtrain = xgb.DMatrix(pdtrain, integer_y)
 ```
 
     Data set's shape,
-    X.shape, integer_y.shape, len(attrs_names), len(output_labels):
+    X.shape, integer_y.shape, len(feature_names), len(class_names):
     (1728, 27) (1728,) 27 4
 
 
-### Train simple decision trees (here using XGBoost) to fit the data set:
+### Train a simple decision tree to fit the data set:
 
 First, let's define some hyperparameters, such as the depth of the tree.
 
 
 ```python
+max_depth = 6
+clf = tree.DecisionTreeClassifier(max_depth=max_depth)
+clf = clf.fit(X, integer_y)
 
-num_rounds = 1  # Do not use boosting for now, we want only 1 decision tree per class.
-num_classes = len(output_labels)
-num_trees = num_rounds * num_classes
-
-# Let's use a max_depth of 4 for the sole goal of simplifying the visual representation produced
-# (ideally, a tree would be deeper to classify perfectly on that dataset)
-param = {
-    'max_depth': 4,
-    'objective': 'multi:softprob',
-    'num_class': num_classes
-}
-
-bst = xgb.train(param, dtrain, num_boost_round=num_rounds)
-print("Decision trees trained!")
-print("Mean Error Rate:", bst.eval(dtrain))
-print("Accuracy:", (bst.predict(dtrain).argmax(axis=-1) == integer_y).mean()*100, "%")
+print("Decision tree trained!")
+accuracy = clf.score(X, integer_y)
+print("Errors:", 100 - accuracy * 100, "%")
+print("Accuracy:", accuracy * 100, "%")
 ```
 
-    Decision trees trained!
-    Mean Error Rate: b'[0]\teval-merror:0.142940'
-    Accuracy: 85.7060185185 %
+    Decision tree trained!
+    Errors: 6.53935185185 %
+    Accuracy: 93.4606481481 %
 
 
-### Plot and save the trees (one for each class):
-
-The 4 trees of the classifer (one tree per class) will each output a number that represents how much it is probable that the thing to classify belongs to that class, and it is by comparing the output at the end of all the trees for a given example that we could get the maximal output as associating the example to that class.  Indeed, the binary situation where we have only one tree that outputs a positive and else negative number would be simpler to interpret rather than classifying for 4 binary classes at once. 
+### Plot and save the tree
 
 
 ```python
-def plot_first_trees(bst, output_labels, trees_name):
+def plot_first_tree(clf, class_names, tree_name):
     """
-    Plot and save the first trees for multiclass classification
-    before any boosting was performed.
+    Plot and save our scikit-learn tree.
     """
-    for tree_idx in range(len(output_labels)):
-        class_name = output_labels[tree_idx]
-        graph_save_path = os.path.join(
-            "exported_xgboost_trees", 
-            "{}_{}_for_{}".format(trees_name, tree_idx, class_name)
-        )
+    graph_save_path = os.path.join(
+        "exported_sklearn_trees", 
+        "{}".format(tree_name)
+    )
 
-        graph = xgb.to_graphviz(bst, num_trees=tree_idx)
-        graph.render(graph_save_path)
+    tree.export_graphviz(clf, out_file="{}.dot".format(graph_save_path))
+    dotfile = StringIO()
+    tree.export_graphviz(
+        clf, out_file=dotfile,
+        feature_names=feature_names, class_names=class_names,
+        filled=True, rotate=True
+    )
+    pydot.graph_from_dot_data(dotfile.getvalue())[0].write_png("{}.png".format(graph_save_path))
 
-        # from IPython.display import display
-        # display(graph)
-        ### Inline display in the notebook would be too huge and would require much side scrolling.
-        ### So we rather plot it anew with matplotlib and a fixed size for inline quick view purposes:
-        fig, ax = plt.subplots(figsize=(16, 16)) 
-        plot_tree(bst, num_trees=tree_idx, rankdir='LR', ax=ax)
-        plt.title("Saved a high-resolution graph for the class '{}' to: {}.pdf".format(class_name, graph_save_path))
-        plt.show()
-
-# Plot our simple trees:
-plot_first_trees(bst, output_labels, trees_name="simple_tree")
+# Plot our simple tree:
+plot_first_tree(clf, class_names, tree_name="simple_tree")
 ```
 
+Note that [the tree below can also be viewed here online](https://github.com/Vooban/Decision-Trees-For-Knowledge-Discovery/tree/master/exported_sklearn_trees).
 
-![png](Decision-Trees-For-Knowledge-Discovery_files/Decision-Trees-For-Knowledge-Discovery_8_0.png)
+![simple tree](exported_sklearn_trees/simple_tree.png)
 
+### Plot the importance of each input features of the simple tree:
 
-
-![png](Decision-Trees-For-Knowledge-Discovery_files/Decision-Trees-For-Knowledge-Discovery_8_1.png)
-
-
-
-![png](Decision-Trees-For-Knowledge-Discovery_files/Decision-Trees-For-Knowledge-Discovery_8_2.png)
-
-
-
-![png](Decision-Trees-For-Knowledge-Discovery_files/Decision-Trees-For-Knowledge-Discovery_8_3.png)
-
-
-Note that the above trees can be viewed here online:
-https://github.com/Vooban/Decision-Trees-For-Knowledge-Discovery/tree/master/exported_trees
-
-### Plot the importance of each input features for those simple decision trees:
-
-Note here that it is the feature importance according to our simple, shallow trees. More complex trees would include more of the features/attributes with different proportions. 
+Note here that it is the feature importance according to our simple, shallow tree. A fully complex trees would surely include more of the features/attributes, and with different proportions. 
 
 
 ```python
-fig, ax = plt.subplots(figsize=(12, 7)) 
-xgb.plot_importance(bst, ax=ax)
-plt.show()
+def feature_importance_chart(clf, classifier_name, feature_names):
+    sorted_feature_importances, sorted_feature_names = (
+        zip(*sorted(zip(clf.feature_importances_, feature_names)))
+    )
+    plt.figure(figsize=(16, 9))
+    plt.barh(range(len(sorted_feature_importances)), sorted_feature_importances)
+    plt.yticks(
+        range(len(sorted_feature_importances)),
+        ["{}: {:.3}".format(a, b) for a, b in zip(sorted_feature_names, sorted_feature_importances)]
+    )
+    plt.title("The Gini feature importance for the {} \n"
+              "(total decrease in node impurity, weighted by the "
+              "probability of reaching that node)".format(classifier_name))
+    plt.show()
+
+feature_importance_chart(clf, "simple tree", feature_names)
 ```
 
 
-![png](Decision-Trees-For-Knowledge-Discovery_files/Decision-Trees-For-Knowledge-Discovery_10_0.png)
+![png](Decision-Trees-For-Knowledge-Discovery-With-Scikit-Learn_files/Decision-Trees-For-Knowledge-Discovery-With-Scikit-Learn_10_0.png)
 
 
-### Let's now generate slightly more complex trees to aid inspection
+### Let's now generate a fully perfect (complex) tree
 
 <a href="http://theinceptionbutton.com/" >
 <p align="center">
@@ -251,161 +232,59 @@ plt.show()
 </p>
 </a>
 
-Let's [go deeper](http://theinceptionbutton.com/) and build deeper trees. However, those trees are not maximally complex since XGBoost is rather built to boost over forests of small trees than a big one.
+Let's [go deeper](http://theinceptionbutton.com/). Let's build a deeper tree. At least, a simple tree like the one above is interesting for having a simplfied view of the true logic behind our data.
 
 
 ```python
-num_rounds = 1  # Do not use boosting for now, we want only 1 decision tree per class.
-num_classes = len(output_labels)
-num_trees = num_rounds * num_classes
+max_depth = None  # Full depth
+clf = tree.DecisionTreeClassifier(max_depth=max_depth)
+clf = clf.fit(X, integer_y)
 
-# Let's use a max_depth of 4 for the sole goal of simplifying the visual representation produced
-# (ideally, a tree would be deeper to classify perfectly on that dataset)
-param = {
-    'max_depth': 9,
-    'objective': 'multi:softprob',
-    'num_class': num_classes
-}
-
-bst = xgb.train(param, dtrain, num_boost_round=num_rounds)
-print("Decision trees trained!")
-print("Mean Error Rate:", bst.eval(dtrain))
-print("Accuracy:", (bst.predict(dtrain).argmax(axis=-1) == integer_y).mean()*100, "%")
+print("Decision tree trained!")
+accuracy = clf.score(X, integer_y)
+print("Errors:", 100 - accuracy * 100, "%")
+print("Accuracy:", accuracy * 100, "%")
 ```
 
-    Decision trees trained!
-    Mean Error Rate: b'[0]\teval-merror:0.017940'
-    Accuracy: 98.2060185185 %
-
-
-
-```python
-# Plot our complex trees:
-plot_first_trees(bst, output_labels, trees_name="complex_tree")
-
-# And their feature importance:
-print("Now, our feature importance chart considers more features, but it is still not complete.")
-fig, ax = plt.subplots(figsize=(12, 7)) 
-xgb.plot_importance(bst, ax=ax)
-plt.show()
-```
-
-
-![png](Decision-Trees-For-Knowledge-Discovery_files/Decision-Trees-For-Knowledge-Discovery_13_0.png)
-
-
-
-![png](Decision-Trees-For-Knowledge-Discovery_files/Decision-Trees-For-Knowledge-Discovery_13_1.png)
-
-
-
-![png](Decision-Trees-For-Knowledge-Discovery_files/Decision-Trees-For-Knowledge-Discovery_13_2.png)
-
-
-
-![png](Decision-Trees-For-Knowledge-Discovery_files/Decision-Trees-For-Knowledge-Discovery_13_3.png)
-
-
-    Now, our feature importance chart considers more features, but it is still not complete.
-
-
-
-![png](Decision-Trees-For-Knowledge-Discovery_files/Decision-Trees-For-Knowledge-Discovery_13_5.png)
-
-
-Note that the above trees can be viewed here online:
-https://github.com/Vooban/Decision-Trees-For-Knowledge-Discovery/tree/master/exported_trees
-
-### Finding a perfect classifier rather than an easily explainable one
-
-We'll now use boosting. The resulting trees can't be explained as easily as the previous ones, since one classifier will now have incrementally many trees for each class to reduce error, each new trees based on the errors of the previous ones. And those trees will each be weighted. 
-
-
-```python
-num_rounds = 10  # 10 rounds of boosting, thus 10 trees per class. 
-num_classes = len(output_labels)
-num_trees = num_rounds * num_classes
-
-param = {
-    'max_depth': 20,
-    'eta': 1.43,
-    'objective': 'multi:softprob',
-    'num_class': num_classes,
-}
-
-bst = xgb.train(param, dtrain, early_stopping_rounds=1, num_boost_round=num_rounds, evals=[(dtrain, "dtrain")])
-print("Boosted decision trees trained!")
-print("Mean Error Rate:", bst.eval(dtrain))
-print("Accuracy:", (bst.predict(dtrain).argmax(axis=-1) == integer_y).mean()*100, "%")
-```
-
-    [0]	dtrain-merror:0.016782
-    Will train until dtrain-merror hasn't improved in 1 rounds.
-    [1]	dtrain-merror:0.002315
-    [2]	dtrain-merror:0
-    [3]	dtrain-merror:0
-    Stopping. Best iteration:
-    [2]	dtrain-merror:0
-    
-    Boosted decision trees trained!
-    Mean Error Rate: b'[0]\teval-merror:0.000000'
+    Decision tree trained!
+    Errors: 0.0 %
     Accuracy: 100.0 %
 
 
-In our case, note that it is possible to have an error of 0 (thus an accuracy of 100%) since we have a dataset that represents a function, which is mathematically deterministic and could be interpreted as programmatically pure in the case it would be implemented. But wait... we just implemented and recreated the function that was used to modelize the dataset with our trees! We don't need cross validation nor a test set, because our training data already covers the full feature space (attribute space). 
-
-### Finally, the full attributes/features importance:
+### A plot of the full tree
 
 
 ```python
-# Some plot options from the doc:
-# importance_type : str, default "weight"
-#     How the importance is calculated: either "weight", "gain", or "cover"
-#     "weight" is the number of times a feature appears in a tree
-#     "gain" is the average gain of splits which use the feature
-#     "cover" is the average coverage of splits which use the feature
-#         where coverage is defined as the number of samples affected by the split
-
-importance_types = ["weight", "gain", "cover"]
-for i in importance_types:
-    print("Importance type:", i)
-    fig, ax = plt.subplots(figsize=(12, 7))
-    xgb.plot_importance(bst, importance_type=i, ax=ax)
-    plt.show()
+plot_first_tree(clf, class_names, tree_name="complex_tree")
 ```
 
-    Importance type: weight
+Note that [the tree below can also be viewed here online](https://github.com/Vooban/Decision-Trees-For-Knowledge-Discovery/tree/master/exported_sklearn_trees). It would also be possible to [extract the tree as true code and create a function](https://stackoverflow.com/questions/20224526/how-to-extract-the-decision-rules-from-scikit-learn-decision-tree).
+
+![complex tree](exported_sklearn_trees/complex_tree.png)
+
+### Finally, the full feature importance:
 
 
-
-![png](Decision-Trees-For-Knowledge-Discovery_files/Decision-Trees-For-Knowledge-Discovery_17_1.png)
-
-
-    Importance type: gain
+```python
+feature_importance_chart(clf, "complex tree", feature_names)
+```
 
 
+![png](Decision-Trees-For-Knowledge-Discovery-With-Scikit-Learn_files/Decision-Trees-For-Knowledge-Discovery-With-Scikit-Learn_17_0.png)
 
-![png](Decision-Trees-For-Knowledge-Discovery_files/Decision-Trees-For-Knowledge-Discovery_17_3.png)
-
-
-    Importance type: cover
-
-
-
-![png](Decision-Trees-For-Knowledge-Discovery_files/Decision-Trees-For-Knowledge-Discovery_17_5.png)
 
 
 ## Conclusion
 
-To sum up, we achieved to get a good classification result and to be able to explain those results visually and automatically. Here, we did classification (so we requred 4 trees - one for each class), but also note that it would have been possible to solve a regression problem, too, such as predicting a price rather than a category, using a single tree.
+To sum up, we achieved to get good classification results and to be able to explain those results visually and automatically. Note that it would have been possible to solve a regression problem with the same algorithm, such as predicting a price rather than a category.
 
-Such a technique would be useful in reverse engineering an existing system, such as an old one that has been coded in a peculiar programming language and for which the employees who coded that have left. This technique can also be used for data mining and gaining business intelligence, insights from data. 
+Such a technique can reveal useful in reverse engineering an existing system, such as an old one that has been coded in a peculiar programming language and for which the employees who coded that have left. This technique can also be used for data mining and gaining business intelligence, insights from data.
 
-Decision trees are good to model data sets and XGBoost has revealed to be a <a link="http://blog.kaggle.com/2017/01/23/a-kaggle-master-explains-gradient-boosting/">quite good algorithm for winning Kaggle competitions</a>. Using XGBoost can lead to great results in plus of being interesting for roughly explaining how classifications are made on data. However, XGBoost is normally used for boosting trees (also called gradient boosting) and the resulting forest is hard to interpret. Each tree is trained on the errors of the previous ones until the error gets at its lowest.
+In case your data does not represent a pure function like we have here, such as if for two of your input examples it is possible to have two possible different predictions, then a tree cannot model the data set with a 100% accuracy. Hopefully, if you are in that situation where the logic behind the data is not perfect, it is possible to [repeat the experiment by using XGBoost](https://github.com/Vooban/Decision-Trees-For-Knowledge-Discovery/blob/master/Decision-Trees-For-Knowledge-Discovery-With-XGBoost.ipynb), which can help by incrementally training many trees to reduce the error and in an optimized fashion. The only disadvantage of that is that those boosted forests would be harder to explain due to the fact you would have many trees.
 
 
 ```python
 # Let's convert this notebook to a README for the GitHub project's title page:
-!jupyter nbconvert --to markdown Decision-Trees-For-Knowledge-Discovery.ipynb
-!mv Decision-Trees-For-Knowledge-Discovery.md README.md
+!jupyter nbconvert --to markdown Decision-Trees-For-Knowledge-Discovery-With-Scikit-Learn.ipynb
+!mv Decision-Trees-For-Knowledge-Discovery-With-Scikit-Learn.md README.md
 ```
