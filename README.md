@@ -1,9 +1,9 @@
 
 # Discovering structure behind data
 
-Let's understand and modelize the hidden structure behind data with Decision Trees. In this tutorial, we'll explore and inspect how can a model do its decisions on a car evaluation data set. Decision trees works with simple "if" clauses dichotomically chained together, splitting the data flow recursively on those if until it reaches a leaf where we can categorize the data. Such data inspection could be used to reverse engineer the behavior of any function. 
+Let's understand and model the hidden structure behind data with Decision Trees. In this tutorial, we'll explore and inspect how a model can do its decisions on a car evaluation data set. Decision trees work with simple "if" clauses dichotomically chained together, splitting the data flow recursively on those "if"s until they reach a leaf where we can categorize the data. Such data inspection could be used to reverse engineer the behavior of any function. 
 
-Since [decision trees](http://www.r2d3.us/visual-intro-to-machine-learning-part-1/) are a good algorithm for discovering the structure hidden behind data, we'll use and model the car evaluation data set, for which the prediction problem is a (deterministic) surjective function. This means that the inputs of the examples in the data set cover all the possibilities, and that for each possible input value, there is only one answer to predict (thus, two examples with the same input values would never have a different expected prediction). On the point of view of Data Science, because of the properties of our dataset, we won't need a test set nor to use cross validation. Thus, the error we will obtain below at modelizing our dataset would be equal to the true test error if we had a test set.
+Since [decision trees](http://www.r2d3.us/visual-intro-to-machine-learning-part-1/) are good algorithms for discovering the structure hidden behind data, we'll use and model the car evaluation data set, for which the prediction problem is a (deterministic) surjective function. This means that the inputs of the examples in the data set cover all the possibilities, and that for each possible input value, there is only one answer to predict (thus, two examples with the same input values would never have a different expected prediction). On the point of view of Data Science, because of the properties of our dataset, we won't need to use a test set nor to use cross validation. Thus, the error we will obtain below at modelizing our dataset would be equal to the true test error if we had a test set.
 
 The attribute to predict in the data set could have been, for example, created from a programmatic function and we will basically reverse engineer the logic mapping the inputs to the outputs to recreate the function and to be able to explain it visually.
 
@@ -19,7 +19,7 @@ The Car Evaluation Database was derived from a simple hierarchical decision mode
 - CAR car acceptability:
   - PRICE overall price:
     - **buying** buying price
-    - **maint price** of the maintenance
+    - **maint** price of the maintenance
   - TECH technical characteristics:
     - COMFORT comfort:
       - **doors** number of doors
@@ -27,7 +27,7 @@ The Car Evaluation Database was derived from a simple hierarchical decision mode
       - **lug_boot** the size of luggage boot
     - **safety** estimated safety of the car
 
-Input attributes are printed in lowercase. Besides the target concept (CAR), the model includes three intermediate concepts: PRICE, TECH, COMFORT. Every concept is in the original model related to its lower level descendants by a set of examples (for these examples sets see [Web Link]). 
+Input attributes are printed in lowercase. Besides the target concept (CAR), the model includes three intermediate concepts: PRICE, TECH, COMFORT. Every concept is in the original model related to its lower level descendants by a set of examples. 
 
 The Car Evaluation Database contains examples with the structural information removed, i.e., directly relates CAR to the six input attributes: buying, maint, doors, persons, lug_boot, safety. 
 
@@ -75,7 +75,7 @@ import os
 
 ### Define the features and preprocess the car evaluation data set
 
-We'll preprocess the attributes into redundant features, such as using an integer index (linear) to represent a value for an attribute, as well as also using a one-hot encoding for each attribute's possible values as new features. Despite this is redundant, this will help to make the tree smaller since it has more choice on how to split data on each branch. 
+We'll preprocess the attributes into redundant features, such as using an integer index (linear) to represent a value for an attribute, as well as also using a one-hot encoding for each attribute's possible values as new features. Despite the fact that this is redundant, this will help to make the tree smaller since it has more choice on how to split data on each branch. 
 
 
 ```python
@@ -226,11 +226,9 @@ feature_importance_chart(clf, "simple tree", feature_names)
 
 ### Let's now generate a fully perfect (complex) tree
 
-<a href="http://theinceptionbutton.com/" >
 <p align="center">
-  <img src="deeper.jpg" />
+  <a href="http://theinceptionbutton.com/" ><img src="deeper.jpg" /></a>
 </p>
-</a>
 
 Let's [go deeper](http://theinceptionbutton.com/). Let's build a deeper tree. At least, a simple tree like the one above is interesting for having a simplfied view of the true logic behind our data.
 
@@ -276,11 +274,11 @@ feature_importance_chart(clf, "complex tree", feature_names)
 
 ## Conclusion
 
-To sum up, we achieved to get good classification results and to be able to explain those results visually and automatically. Note that it would have been possible to solve a regression problem with the same algorithm, such as predicting a price rather than a category.
+To sum up, we managed to get good classification results and to be able to explain those results visually and automatically. Note that it would have been possible to solve a regression problem with the same algorithm, such as predicting a price rather than a category.
 
-Such a technique can reveal useful in reverse engineering an existing system, such as an old one that has been coded in a peculiar programming language and for which the employees who coded that have left. This technique can also be used for data mining and gaining business intelligence, insights from data.
+Such a technique can be useful in reverse engineering an existing system, such as an old one that has been coded in a peculiar programming language and for which the employees who coded it have left. This technique can also be used for data mining, gaining business intelligence, and insights from data.
 
-In case your data does not represent a pure function like we have here, such as if for two of your input examples it is possible to have two possible different predictions, then a tree cannot model the data set with a 100% accuracy. Hopefully, if you are in that situation where the logic behind the data is not perfect, it is possible to [repeat the experiment by using XGBoost](https://github.com/Vooban/Decision-Trees-For-Knowledge-Discovery/blob/master/Decision-Trees-For-Knowledge-Discovery-With-XGBoost.ipynb), which can help by incrementally training many trees to reduce the error and in an optimized fashion. The only disadvantage of that is that those boosted forests would be harder to explain due to the fact you would have many trees.
+In the case that your data does not represent a pure function like we have here, such as if for two of your input examples it is possible to have two possible different predictions, then a tree cannot model the data set with 100% accuracy. Hopefully, if you are in that situation where the logic behind the data is not perfect, it is possible to [repeat the experiment by using XGBoost](https://github.com/Vooban/Decision-Trees-For-Knowledge-Discovery/blob/master/Decision-Trees-For-Knowledge-Discovery-With-XGBoost.ipynb), which can help by incrementally training many trees to reduce the error and training them in an optimized fashion. The only disadvantage of that is that those boosted forests would be harder to explain due to the fact that you would have many trees.
 
 
 ```python
